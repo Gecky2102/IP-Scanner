@@ -21,6 +21,7 @@ import psutil
 # Importa il motore di scansione
 from ip_scanner import IPScanner
 from config import PORTE_COMUNI, WEB_PORTS, DB_PORTS, NETWORK_PORTS
+from report_manager import ReportManager
 
 # Configura il tema scuro
 ctk.set_appearance_mode("dark")
@@ -44,6 +45,9 @@ class IPScannerGUI:
         self.scanner = IPScanner()
         self.scan_running = False
         self.current_scan_thread = None
+        
+        # Report manager
+        self.report_manager = ReportManager()
         
         # Variabili per tracking progresso
         self.start_time = None
@@ -362,21 +366,57 @@ class IPScannerGUI:
         
         # Pulsanti utilità
         util_frame = ctk.CTkFrame(button_frame, fg_color="transparent")
-        util_frame.pack(fill="x")
+        util_frame.pack(fill="x", pady=(10, 0))
         
-        save_button = ctk.CTkButton(
-            util_frame,
-            text="💾 Salva",
-            command=self.save_results,
-            width=100
+        # Prima riga pulsanti
+        util_row1 = ctk.CTkFrame(util_frame, fg_color="transparent")
+        util_row1.pack(fill="x", pady=(0, 5))
+        
+        export_all_button = ctk.CTkButton(
+            util_row1,
+            text="📊 Esporta Tutto",
+            command=self.export_all_formats,
+            width=120,
+            fg_color="green",
+            hover_color="darkgreen"
         )
-        save_button.pack(side="left", padx=(0, 5))
+        export_all_button.pack(side="left", padx=(0, 5))
+        
+        html_report_button = ctk.CTkButton(
+            util_row1,
+            text="🌐 Report HTML",
+            command=self.generate_html_report,
+            width=120,
+            fg_color="orange",
+            hover_color="darkorange"
+        )
+        html_report_button.pack(side="right", padx=(5, 0))
+        
+        # Seconda riga pulsanti
+        util_row2 = ctk.CTkFrame(util_frame, fg_color="transparent")
+        util_row2.pack(fill="x")
+        
+        save_csv_button = ctk.CTkButton(
+            util_row2,
+            text="📋 CSV",
+            command=self.save_csv,
+            width=80
+        )
+        save_csv_button.pack(side="left", padx=(0, 5))
+        
+        save_excel_button = ctk.CTkButton(
+            util_row2,
+            text="📊 Excel",
+            command=self.save_excel,
+            width=80
+        )
+        save_excel_button.pack(side="left", padx=(0, 5))
         
         clear_button = ctk.CTkButton(
-            util_frame,
+            util_row2,
             text="🗑️ Pulisci",
             command=self.clear_results,
-            width=100
+            width=80
         )
         clear_button.pack(side="right", padx=(5, 0))
         
@@ -658,6 +698,9 @@ class IPScannerGUI:
             self.hosts_found = 0
             self.total_ports_found = 0
             
+            # Pulisci report precedente
+            self.report_manager.clear_results()
+            
             if "/" in target:
                 # Scansione rete
                 self.scan_network(target, ports)
@@ -671,17 +714,114 @@ class IPScannerGUI:
             duration = end_time - self.start_time
             
             if self.scan_running:
-                self.update_status(f"✅ Scansione completata!")
-                self.update_time_stats(duration, completed=True)
-                self.show_scan_summary()
+                self.update_status("🔍 Raccolta informazioni di rete...")
+                
+                # Imposta metadati scansione
+                ports_mode = self.port_mode_var.get()
+                self.report_manager.set_scan_metadata(target, self.total_hosts, duration, ports_mode)
+                
+                # Avvia raccolta informazioni di rete in background
+                self.enhance_results_thread = threading.Thread(
+                    target=self.enhance_results_with_network_info,
+                    daemon=True
+                )
+                self.enhance_results_thread.start()
                 
         except Exception as e:
             if self.scan_running:
                 self.update_status(f"❌ Errore durante la scansione: {e}")
                 self.append_result(f"❌ ERRORE: {e}\n")
         finally:
+            if self.scan_running and not hasattr(self, 'enhance_results_thread'):
+                self.scan_completed()
+                
+    def enhance_results_with_network_info(self):
+        """Raccoglie informazioni di rete avanzate per tutti gli host attivi"""
+        try:
+            active_hosts = [r for r in self.scan_results if r['porte_aperte'] or True]  # Tutti gli host per ora
+            total_active = len(active_hosts)
+            
+            if total_active == 0:
+                self.scan_completed()
+                return
+                
+            self.update_status(f"🔍 Raccolta MAC addresses e nomi dispositivi... (0/{total_active})")
+            
+            for i, host_result in enumerate(active_hosts):
+                if not self.scan_running:
+                    break
+                    
+                ip = host_result['ip']
+                
+                # Aggiorna status
+                self.update_status(f"🔍 Analizzando {ip}... ({i+1}/{total_active})")
+                
+                # Ottieni MAC address
+                mac_address = self.report_manager.get_mac_address(ip)
+                
+                # Ottieni nome dispositivo
+                device_name = self.report_manager.get_device_name(ip, mac_address)
+                
+                # Aggiungi al report manager
+                self.report_manager.add_result(
+                    ip=ip,
+                    active=True,
+                    hostname=host_result['hostname'],
+                    open_ports=host_result['porte_aperte'],
+                    mac_address=mac_address,
+                    device_name=device_name
+                )
+                
+                # Aggiorna risultati nella UI
+                if mac_address and mac_address != 'N/A':
+                    self.append_result(f"  🔧 MAC: {mac_address}\n")
+                if device_name and device_name != 'N/A':
+                    self.append_result(f"  💻 Dispositivo: {device_name}\n")
+                    
+            # Aggiungi anche host inattivi al report
+            for result in self.scan_results:
+                if not result.get('porte_aperte'):  # Host probabilmente inattivo
+                    self.report_manager.add_result(
+                        ip=result['ip'],
+                        active=False,
+                        hostname=result.get('hostname', 'N/A')
+                    )
+            
+            if self.scan_running:
+                self.update_status("✅ Scansione completata! Generazione report...")
+                self.show_scan_summary()
+                
+                # Genera automaticamente il report HTML
+                self.auto_generate_final_report()
+                
+        except Exception as e:
+            self.update_status(f"❌ Errore raccolta informazioni: {e}")
+        finally:
             if self.scan_running:
                 self.scan_completed()
+                
+    def auto_generate_final_report(self):
+        """Genera automaticamente il report finale e lo apre"""
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            html_filename = f"scan_report_{timestamp}.html"
+            
+            if self.report_manager.generate_html_report(html_filename):
+                self.append_result(f"\n🌐 Report HTML generato: {html_filename}\n")
+                
+                # Apri automaticamente nel browser
+                if self.report_manager.open_html_report(html_filename):
+                    self.append_result("🌐 Report aperto nel browser!\n")
+                else:
+                    self.append_result("⚠️ Impossibile aprire automaticamente il report\n")
+                    
+                # Mostra dialog con opzioni
+                self.show_export_dialog()
+            else:
+                self.append_result("❌ Errore nella generazione del report HTML\n")
+                
+        except Exception as e:
+            self.append_result(f"❌ Errore generazione report: {e}\n")
                 
     def scan_network(self, network, ports):
         """Scansiona una rete con aggiornamenti in tempo reale"""
@@ -887,45 +1027,157 @@ class IPScannerGUI:
             avg_ports = total_ports / total_hosts
             self.append_result(f"📊 Media porte per host: {avg_ports:.1f}\n")
             
-    def save_results(self):
-        """Salva i risultati in un file"""
-        if not self.scan_results:
-            messagebox.showwarning("Attenzione", "⚠️ Nessun risultato da salvare!")
+    def show_export_dialog(self):
+        """Mostra dialog per opzioni di esportazione"""
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("📊 Opzioni Esportazione")
+        dialog.geometry("400x300")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Centra il dialog
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (400 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (300 // 2)
+        dialog.geometry(f"400x300+{x}+{y}")
+        
+        # Contenuto
+        ctk.CTkLabel(
+            dialog, 
+            text="📊 Esportazione Completata!", 
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=20)
+        
+        ctk.CTkLabel(
+            dialog, 
+            text="Il report HTML è stato aperto automaticamente.\nVuoi esportare anche in altri formati?",
+            justify="center"
+        ).pack(pady=10)
+        
+        # Pulsanti
+        button_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        button_frame.pack(fill="x", padx=20, pady=20)
+        
+        ctk.CTkButton(
+            button_frame,
+            text="📋 Esporta CSV",
+            command=lambda: [self.save_csv(), dialog.destroy()],
+            width=150
+        ).pack(pady=5)
+        
+        ctk.CTkButton(
+            button_frame,
+            text="📊 Esporta Excel",
+            command=lambda: [self.save_excel(), dialog.destroy()],
+            width=150
+        ).pack(pady=5)
+        
+        ctk.CTkButton(
+            button_frame,
+            text="📦 Esporta Tutto",
+            command=lambda: [self.export_all_formats(), dialog.destroy()],
+            width=150
+        ).pack(pady=5)
+        
+        ctk.CTkButton(
+            button_frame,
+            text="❌ Chiudi",
+            command=dialog.destroy,
+            width=150,
+            fg_color="gray"
+        ).pack(pady=10)
+        
+    def save_csv(self):
+        """Salva risultati in formato CSV"""
+        if not self.report_manager.results_data:
+            messagebox.showwarning("Attenzione", "⚠️ Nessun dato da esportare!")
             return
             
         filename = filedialog.asksaveasfilename(
-            defaultextension=".json",
-            filetypes=[
-                ("JSON files", "*.json"),
-                ("Text files", "*.txt"),
-                ("All files", "*.*")
-            ],
-            title="Salva risultati scansione"
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            title="Salva report CSV"
         )
         
-        if not filename:
+        if filename:
+            if self.report_manager.export_to_csv(filename):
+                messagebox.showinfo("Successo", f"✅ Report CSV salvato:\n{filename}")
+            else:
+                messagebox.showerror("Errore", "❌ Errore durante il salvataggio CSV")
+                
+    def save_excel(self):
+        """Salva risultati in formato Excel"""
+        if not self.report_manager.results_data:
+            messagebox.showwarning("Attenzione", "⚠️ Nessun dato da esportare!")
             return
             
-        try:
-            if filename.endswith('.json'):
-                # Salva in formato JSON
-                data = {
-                    'timestamp': datetime.now().isoformat(),
-                    'target': self.target_var.get(),
-                    'results': self.scan_results
-                }
-                with open(filename, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+            title="Salva report Excel"
+        )
+        
+        if filename:
+            if self.report_manager.export_to_excel(filename):
+                messagebox.showinfo("Successo", f"✅ Report Excel salvato:\n{filename}")
             else:
-                # Salva in formato testo
-                with open(filename, 'w', encoding='utf-8') as f:
-                    content = self.results_text.get("1.0", "end")
-                    f.write(content)
-                    
-            messagebox.showinfo("Successo", f"✅ Risultati salvati in: {filename}")
+                messagebox.showerror("Errore", "❌ Errore durante il salvataggio Excel")
+                
+    def generate_html_report(self):
+        """Genera e apre report HTML"""
+        if not self.report_manager.results_data:
+            messagebox.showwarning("Attenzione", "⚠️ Nessun dato da esportare!")
+            return
             
-        except Exception as e:
-            messagebox.showerror("Errore", f"❌ Errore nel salvataggio: {e}")
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".html",
+            filetypes=[("HTML files", "*.html"), ("All files", "*.*")],
+            title="Salva report HTML"
+        )
+        
+        if filename:
+            if self.report_manager.generate_html_report(filename):
+                self.report_manager.open_html_report(filename)
+                messagebox.showinfo("Successo", f"✅ Report HTML generato e aperto:\n{filename}")
+            else:
+                messagebox.showerror("Errore", "❌ Errore durante la generazione HTML")
+                
+    def export_all_formats(self):
+        """Esporta in tutti i formati disponibili"""
+        if not self.report_manager.results_data:
+            messagebox.showwarning("Attenzione", "⚠️ Nessun dato da esportare!")
+            return
+            
+        # Chiedi la directory di destinazione
+        directory = filedialog.askdirectory(title="Seleziona cartella per esportazione completa")
+        
+        if directory:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_filename = os.path.join(directory, f"scan_report_{timestamp}")
+            
+            results = self.report_manager.export_all_formats(base_filename)
+            
+            # Mostra risultati
+            success_count = sum(1 for r in results.values() if r['success'])
+            total_count = len(results)
+            
+            if success_count == total_count:
+                messagebox.showinfo(
+                    "Successo", 
+                    f"✅ Tutti i {total_count} formati esportati con successo!\n\n" +
+                    "\n".join([f"📄 {fmt.upper()}: {r['filename']}" for fmt, r in results.items() if r['success']])
+                )
+                
+                # Apri report HTML se disponibile
+                html_result = results.get('html')
+                if html_result and html_result['success']:
+                    self.report_manager.open_html_report(html_result['filename'])
+            else:
+                failed = [fmt for fmt, r in results.items() if not r['success']]
+                messagebox.showwarning(
+                    "Parziale", 
+                    f"⚠️ {success_count}/{total_count} formati esportati.\n\nFalliti: {', '.join(failed)}"
+                )
             
     def clear_results(self):
         """Pulisce i risultati"""
