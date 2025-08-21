@@ -4,17 +4,39 @@ Un potente scansionatore di rete e porte scritto in Python con interfaccia a lin
 
 ## ✨ Caratteristiche
 
-- 🎯 **Scansione IP singoli** - Verifica se un host è attivo e scansiona le porte
-- 🌐 **Scansione reti intere** - Scansiona automaticamente tutti gli host in una rete
-- 🔓 **Scansione porte personalizzate** - Definisci le porte da scansionare
-- 📊 **Range di porte** - Scansiona un intervallo di porte (es: 1-1000)
-- 🏃‍♂️ **Multithreading** - Scansioni veloci con thread multipli
-- 🏠 **Risoluzione hostname** - Ottiene i nomi host degli IP scansionati
-- 📋 **Identificazione servizi** - Riconosce i servizi comuni sulle porte
-- 💬 **Interfaccia italiana** - Tutti i messaggi e l'interfaccia in italiano
-- 🎨 **Interfaccia Grafica Moderna** - GUI con tema scuro e design professionale
-- 💾 **Salvataggio risultati** - Esporta in JSON o TXT
-- 📊 **Visualizzazione tempo reale** - Progress bar e aggiornamenti live
+### 🎯 **Scansione Intelligente**
+- **Rilevamento automatico rete locale** - Trova automaticamente la tua rete
+- **Scansione IP singoli** - Verifica host specifici
+- **Scansione reti intere** - Analizza interi subnet (es: 192.168.1.0/24)
+- **Range di porte personalizzabili** - Da singole porte a range completi (1-65535)
+
+### 🚀 **Performance Avanzate**
+- **Multithreading** - Fino a 500 thread per scansioni ultra-veloci
+- **Timeout intelligente** - Ottimizza velocità vs accuratezza
+- **Progress tracking** - Monitoraggio in tempo reale con ETA
+- **Cancellazione immediata** - Stop istantaneo delle scansioni
+
+### 🎨 **Interfaccia Grafica Moderna**
+- **⚫ Tema scuro professionale** - Design elegante e moderno
+- **📊 Dashboard in tempo reale** - Statistiche live durante la scansione
+- **⏱️ Tempo stimato (ETA)** - Calcolo dinamico del tempo rimanente
+- **🌐 Auto-detect rete** - Rileva automaticamente la configurazione di rete
+- **💾 Esportazione avanzata** - Salva in JSON o TXT con metadati
+
+### 🔧 **Modalità Porte Intelligenti**
+- **Porte Comuni** - Le 50+ porte più utilizzate
+- **Solo Web** - HTTP/HTTPS e varianti (80, 443, 8080, 8443)
+- **Solo Database** - MySQL, PostgreSQL, MongoDB, Redis
+- **Solo Rete** - FTP, SSH, DNS, SMTP, POP3
+- **Personalizzate** - Lista custom (es: 80,443,22,3306)
+- **Range** - Intervalli (es: 1-1000, 8000-9000)
+
+### 💡 **Funzionalità Professionali**
+- **🏠 Risoluzione hostname** - Nomi host automatici per ogni IP
+- **📋 Identificazione servizi** - Riconosce 50+ servizi comuni
+- **💬 Interfaccia italiana** - Completamente localizzata
+- **🛡️ Uso responsabile** - Guide sicurezza integrate
+- **📈 Statistiche dettagliate** - Report completi con metriche
 
 ## 🚀 Installazione
 
@@ -40,20 +62,27 @@ python run_gui.py
 ```
 
 **Caratteristiche dell'interfaccia grafica:**
-- ⚫ **Tema scuro** professionale
-- 📋 **Pannello configurazione** intuitivo
-- 📊 **Visualizzazione risultati** in tempo reale
+- ⚫ **Tema scuro professionale** con design moderno
+- 🌐 **Auto-detect rete locale** - Rileva automaticamente la tua rete
+- 📊 **Monitoraggio tempo reale** - Progress bar, statistiche live, ETA
 - 🎯 **Modalità porte preconfigurate**:
-  - Porte Comuni (default)
+  - Porte Comuni (50+ porte più utilizzate)
   - Solo Web (80, 443, 8080, 8443)
-  - Solo Database (3306, 5432, 1433)
-  - Solo Rete (21, 22, 23, 25, 53)
+  - Solo Database (3306, 5432, 1433, MongoDB, Redis)
+  - Solo Rete (21, 22, 23, 25, 53, SMTP, DNS)
   - Personalizzate (es: 80,443,22)
   - Range (es: 1-1000)
-- ⚡ **Controlli avanzati** (timeout, thread)
-- 💾 **Salvataggio** in JSON o TXT
-- 📈 **Progress bar** e statistiche
-- ⏹️ **Stop scansione** in qualsiasi momento
+- ⚡ **Controlli avanzati** (timeout, thread, cancellazione)
+- 💾 **Esportazione intelligente** in JSON o TXT
+- 📈 **Statistiche dettagliate** con tempo stimato
+- 🚀 **Pulsanti rapidi** per reti comuni
+- ⏹️ **Stop immediato** con stato preservato
+
+### 📊 **Monitoraggio Avanzato:**
+- **Progress Bar Intelligente**: Percentuale precisa in tempo reale
+- **Statistiche Live**: Host completati/totali, tempo trascorso
+- **ETA Dinamico**: Tempo stimato basato su performance effettive
+- **Contatori**: Host trovati, porte scoperte, velocità scansione
 
 ### 💻 Modalità Linea di Comando
 
