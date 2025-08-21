@@ -34,7 +34,11 @@ Un potente scansionatore di rete e porte scritto in Python con interfaccia a lin
 ### 💡 **Funzionalità Professionali**
 - **🏠 Risoluzione hostname** - Nomi host automatici per ogni IP
 - **📋 Identificazione servizi** - Riconosce 50+ servizi comuni
-- **💬 Interfaccia italiana** - Completamente localizzata
+- **� MAC Address Detection** - Rileva indirizzi fisici via ARP
+- **💻 Device Name Recognition** - Identifica nomi dispositivi (NetBIOS)
+- **📊 Report Avanzati** - Export in CSV, Excel, JSON, HTML interattivo
+- **🌐 Tabella Finale Automatica** - Report HTML si apre automaticamente
+- **�💬 Interfaccia italiana** - Completamente localizzata
 - **🛡️ Uso responsabile** - Guide sicurezza integrate
 - **📈 Statistiche dettagliate** - Report completi con metriche
 
@@ -65,6 +69,10 @@ python run_gui.py
 - ⚫ **Tema scuro professionale** con design moderno
 - 🌐 **Auto-detect rete locale** - Rileva automaticamente la tua rete
 - 📊 **Monitoraggio tempo reale** - Progress bar, statistiche live, ETA
+- 🔧 **Raccolta automatica MAC** - Indirizzi fisici via ARP
+- 💻 **Identificazione dispositivi** - Nomi device via NetBIOS/DNS
+- 📊 **Report finale automatico** - HTML interattivo si apre al termine
+- 💾 **Esportazione multi-formato** - CSV, Excel, JSON, HTML
 - 🎯 **Modalità porte preconfigurate**:
   - Porte Comuni (50+ porte più utilizzate)
   - Solo Web (80, 443, 8080, 8443)
@@ -73,16 +81,15 @@ python run_gui.py
   - Personalizzate (es: 80,443,22)
   - Range (es: 1-1000)
 - ⚡ **Controlli avanzati** (timeout, thread, cancellazione)
-- 💾 **Esportazione intelligente** in JSON o TXT
-- 📈 **Statistiche dettagliate** con tempo stimato
-- 🚀 **Pulsanti rapidi** per reti comuni
+-  **Pulsanti rapidi** per reti comuni
 - ⏹️ **Stop immediato** con stato preservato
 
-### 📊 **Monitoraggio Avanzato:**
-- **Progress Bar Intelligente**: Percentuale precisa in tempo reale
-- **Statistiche Live**: Host completati/totali, tempo trascorso
-- **ETA Dinamico**: Tempo stimato basato su performance effettive
-- **Contatori**: Host trovati, porte scoperte, velocità scansione
+### 📊 **Report Automatici al Completamento:**
+- **🌐 HTML Interattivo**: Tabella con ricerca, filtri, statistiche
+- **📋 Informazioni Complete**: IP, Status, Hostname, MAC, Nome Device
+- **🔍 Ricerca Dinamica**: Filtra per qualsiasi campo
+- **📱 Design Responsive**: Ottimizzato per desktop e mobile
+- **📊 Statistiche Visive**: Contatori e percentuali automatiche
 
 ### 💻 Modalità Linea di Comando
 
@@ -161,17 +168,22 @@ Per default, lo scanner verifica queste porte comuni:
 
 ```
 IP-Scanner/
-├── ip_scanner.py      # Programma principale CLI
-├── gui_scanner.py     # Interfaccia grafica principale
-├── run_gui.py         # Launcher GUI
-├── config.py          # File di configurazione
-├── esempi.py          # Esempi di utilizzo
-├── requirements.txt   # Dipendenze Python
-├── README.md          # Questo file
-├── SECURITY.md        # Guida sicurezza
-├── FAQ.md             # Domande frequenti
-├── .gitignore         # File Git ignore
-└── LICENSE           # Licenza
+├── ip_scanner.py          # Programma principale CLI
+├── gui_scanner.py         # Interfaccia grafica principale
+├── run_gui.py             # Launcher GUI
+├── report_manager.py      # Sistema report avanzati
+├── config.py              # File di configurazione
+├── esempi.py              # Esempi di utilizzo CLI
+├── esempi_report.py       # Esempi report avanzati
+├── start_gui.bat          # Script Windows avvio
+├── requirements.txt       # Dipendenze Python
+├── README.md              # Questo file
+├── GUI_GUIDE.md           # Guida interfaccia grafica
+├── REPORTS_GUIDE.md       # Guida report avanzati
+├── SECURITY.md            # Guida sicurezza
+├── FAQ.md                 # Domande frequenti
+├── .gitignore             # File Git ignore
+└── LICENSE               # Licenza
 ```
 
 ## 🔧 Personalizzazione
