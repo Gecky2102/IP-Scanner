@@ -1,6 +1,6 @@
 # 🔍 IP Scanner
 
-Un potente scansionatore di rete e porte scritto in Python con interfaccia completamente in italiano.
+Un potente scansionatore di rete e porte scritto in Python con interfaccia a linea di comando e **interfaccia grafica moderna** con tema scuro.
 
 ## ✨ Caratteristiche
 
@@ -12,6 +12,9 @@ Un potente scansionatore di rete e porte scritto in Python con interfaccia compl
 - 🏠 **Risoluzione hostname** - Ottiene i nomi host degli IP scansionati
 - 📋 **Identificazione servizi** - Riconosce i servizi comuni sulle porte
 - 💬 **Interfaccia italiana** - Tutti i messaggi e l'interfaccia in italiano
+- 🎨 **Interfaccia Grafica Moderna** - GUI con tema scuro e design professionale
+- 💾 **Salvataggio risultati** - Esporta in JSON o TXT
+- 📊 **Visualizzazione tempo reale** - Progress bar e aggiornamenti live
 
 ## 🚀 Installazione
 
@@ -21,7 +24,190 @@ git clone https://github.com/Gecky2102/IP-Scanner.git
 cd IP-Scanner
 ```
 
-2. Il progetto usa solo librerie standard di Python, non servono dipendenze aggiuntive!
+2. Installa le dipendenze:
+```bash
+pip install -r requirements.txt
+```
+
+## 📖 Utilizzo
+
+### 🎨 Interfaccia Grafica (Consigliata)
+
+Avvia l'interfaccia grafica moderna:
+
+```bash
+python run_gui.py
+```
+
+**Caratteristiche dell'interfaccia grafica:**
+- ⚫ **Tema scuro** professionale
+- 📋 **Pannello configurazione** intuitivo
+- 📊 **Visualizzazione risultati** in tempo reale
+- 🎯 **Modalità porte preconfigurate**:
+  - Porte Comuni (default)
+  - Solo Web (80, 443, 8080, 8443)
+  - Solo Database (3306, 5432, 1433)
+  - Solo Rete (21, 22, 23, 25, 53)
+  - Personalizzate (es: 80,443,22)
+  - Range (es: 1-1000)
+- ⚡ **Controlli avanzati** (timeout, thread)
+- 💾 **Salvataggio** in JSON o TXT
+- 📈 **Progress bar** e statistiche
+- ⏹️ **Stop scansione** in qualsiasi momento
+
+### 💻 Modalità Linea di Comando
+
+#### Scansiona un IP singolo
+```bash
+python ip_scanner.py -t 192.168.1.1
+```
+
+#### Scansiona una rete intera
+```bash
+python ip_scanner.py -t 192.168.1.0/24
+```
+
+#### Scansiona porte specifiche
+```bash
+python ip_scanner.py -t 192.168.1.1 -p 80,443,22
+```
+
+#### Scansiona un range di porte
+```bash
+python ip_scanner.py -t 192.168.1.1 -p 1-1000
+```
+
+#### Modalità Interattiva
+```bash
+python ip_scanner.py
+```
+
+#### Opzioni avanzate
+```bash
+python ip_scanner.py -t 192.168.1.0/24 -p 80,443 --timeout 2 --threads 50
+```
+
+## 🛠️ Parametri
+
+- `-t, --target`: IP o rete da scansionare (obbligatorio)
+- `-p, --ports`: Porte da scansionare (opzionale, default: porte comuni)
+- `--timeout`: Timeout in secondi (default: 1)
+- `--threads`: Numero massimo di thread (default: 100)
+
+## 📋 Esempi
+
+### Esempio 1: Scansione veloce di un server web
+```bash
+python ip_scanner.py -t google.com -p 80,443
+```
+
+### Esempio 2: Scansione completa rete locale
+```bash
+python ip_scanner.py -t 192.168.1.0/24
+```
+
+### Esempio 3: Scansione approfondita con porte personalizzate
+```bash
+python ip_scanner.py -t 10.0.0.1 -p 21,22,23,80,443,3389 --timeout 3
+```
+
+## 🎯 Porte Comuni Scansionate
+
+Per default, lo scanner verifica queste porte comuni:
+
+| Porta | Servizio | Descrizione |
+|-------|----------|-------------|
+| 21    | FTP      | File Transfer Protocol |
+| 22    | SSH      | Secure Shell |
+| 23    | Telnet   | Telnet |
+| 25    | SMTP     | Simple Mail Transfer |
+| 53    | DNS      | Domain Name System |
+| 80    | HTTP     | Web Server |
+| 443   | HTTPS    | Web Server Sicuro |
+| 3389  | RDP      | Remote Desktop |
+| 3306  | MySQL    | Database MySQL |
+| 5900  | VNC      | Virtual Network Computing |
+
+## 📁 Struttura File
+
+```
+IP-Scanner/
+├── ip_scanner.py      # Programma principale CLI
+├── gui_scanner.py     # Interfaccia grafica principale
+├── run_gui.py         # Launcher GUI
+├── config.py          # File di configurazione
+├── esempi.py          # Esempi di utilizzo
+├── requirements.txt   # Dipendenze Python
+├── README.md          # Questo file
+├── SECURITY.md        # Guida sicurezza
+├── FAQ.md             # Domande frequenti
+├── .gitignore         # File Git ignore
+└── LICENSE           # Licenza
+```
+
+## 🔧 Personalizzazione
+
+Puoi modificare il file `config.py` per personalizzare:
+
+- Porte comuni da scansionare
+- Timeout di default
+- Numero massimo di thread
+- Liste di porte specifiche per servizi
+
+## ⚡ Performance
+
+- **Thread multipli**: Fino a 100 thread simultanei per scansioni veloci
+- **Timeout ottimizzato**: 1 secondo di default per bilanciare velocità e accuratezza
+- **Scansioni intelligenti**: Verifica prima se l'host è attivo
+- **GUI reattiva**: Aggiornamenti in tempo reale senza blocchi
+
+## 🎨 Screenshot GUI
+
+L'interfaccia grafica include:
+- 🌙 **Tema scuro** moderno e professionale
+- 📊 **Dashboard** con statistiche in tempo reale
+- ⚙️ **Pannello configurazione** facile da usare
+- 📈 **Progress bar** con indicatori di stato
+- 💾 **Esportazione** risultati con un click
+- 🎯 **Modalità porte** preconfigurate per uso specifico
+
+## 🚨 Note Importanti
+
+- **Uso responsabile**: Usa questo strumento solo su reti di tua proprietà o con autorizzazione
+- **Firewall**: Alcuni firewall potrebbero bloccare o rallentare le scansioni
+- **Performance**: Su reti grandi, considera di aumentare il timeout o ridurre i thread
+- **Sicurezza**: Leggi `SECURITY.md` per le best practice
+
+## 🤝 Contributi
+
+I contributi sono benvenuti! Per favore:
+
+1. Fai un fork del progetto
+2. Crea un branch per la tua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit le tue modifiche (`git commit -m 'Add some AmazingFeature'`)
+4. Push al branch (`git push origin feature/AmazingFeature`)
+5. Apri una Pull Request
+
+## 📄 Licenza
+
+Questo progetto è sotto licenza MIT. Vedi il file `LICENSE` per dettagli.
+
+## 👨‍💻 Autore
+
+- **Gecky2102** - [GitHub Profile](https://github.com/Gecky2102)
+
+## 🆘 Supporto
+
+Se hai problemi o domande:
+
+1. Controlla gli esempi in `esempi.py`
+2. Leggi la documentazione completa in `FAQ.md`
+3. Consulta la guida sicurezza in `SECURITY.md`
+4. Apri una issue su GitHub
+
+---
+
+**Buona scansione! 🔍✨**
 
 ## 📖 Utilizzo
 
