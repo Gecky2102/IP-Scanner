@@ -1,0 +1,16 @@
+# Requirements per IP Scanner
+# Questo progetto utilizza solo librerie standard di Python
+# Non sono necessarie dipendenze esterne
+
+# Per versioni Python consigliate:
+# Python >= 3.7
+
+# Librerie standard utilizzate:
+# - socket (networking)
+# - threading (multithreading)
+# - ipaddress (gestione indirizzi IP)
+# - sys (sistema)
+# - time (tempo)
+# - argparse (argomenti da linea di comando)
+# - datetime (data e ora)
+# - concurrent.futures (esecuzione asincrona)
