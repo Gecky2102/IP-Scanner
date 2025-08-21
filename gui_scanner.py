@@ -14,6 +14,9 @@ import json
 from datetime import datetime
 import sys
 import os
+import socket
+import time
+import psutil
 
 # Importa il motore di scansione
 from ip_scanner import IPScanner
@@ -28,8 +31,8 @@ class IPScannerGUI:
         # Finestra principale
         self.root = ctk.CTk()
         self.root.title("🔍 IP Scanner - Scansionatore di Rete")
-        self.root.geometry("1200x800")
-        self.root.minsize(1000, 600)
+        self.root.geometry("1400x900")
+        self.root.minsize(1200, 700)
         
         # Icona (se disponibile)
         try:
@@ -42,18 +45,92 @@ class IPScannerGUI:
         self.scan_running = False
         self.current_scan_thread = None
         
-        # Variabili
+        # Variabili per tracking progresso
+        self.start_time = None
+        self.hosts_completed = 0
+        self.total_hosts = 0
+        self.hosts_found = 0
+        self.total_ports_found = 0
+        
+        # Variabili UI
         self.target_var = ctk.StringVar()
         self.timeout_var = ctk.StringVar(value="1")
         self.threads_var = ctk.StringVar(value="100")
         self.port_mode_var = ctk.StringVar(value="comuni")
         self.custom_ports_var = ctk.StringVar()
         
+        # Rileva automaticamente la rete locale
+        self.auto_detect_network()
+        
         # Risultati
         self.scan_results = []
         
         self.setup_ui()
         self.setup_styles()
+        
+    def auto_detect_network(self):
+        """Rileva automaticamente la rete locale"""
+        try:
+            # Ottieni l'IP locale e calcola la rete
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            
+            # Se è localhost, prova con le interfacce di rete
+            if local_ip.startswith('127.'):
+                for interface_name, interface_addresses in psutil.net_if_addrs().items():
+                    for address in interface_addresses:
+                        if address.family == socket.AF_INET and not address.address.startswith('127.'):
+                            local_ip = address.address
+                            break
+                    if not local_ip.startswith('127.'):
+                        break
+            
+            # Calcola la rete /24
+            ip_obj = ipaddress.IPv4Address(local_ip)
+            network = ipaddress.IPv4Network(f"{local_ip}/24", strict=False)
+            
+            # Imposta il target automaticamente
+            self.target_var.set(str(network))
+            
+        except Exception as e:
+            # Fallback per rete comune
+            self.target_var.set("192.168.1.0/24")
+            print(f"Errore rilevamento rete: {e}")
+            
+    def get_network_info(self):
+        """Ottiene informazioni dettagliate sulla rete locale"""
+        info = {
+            'local_ip': 'N/A',
+            'gateway': 'N/A',
+            'network': 'N/A',
+            'interfaces': []
+        }
+        
+        try:
+            # IP locale
+            hostname = socket.gethostname()
+            info['local_ip'] = socket.gethostbyname(hostname)
+            
+            # Interfacce di rete
+            for interface_name, interface_addresses in psutil.net_if_addrs().items():
+                for address in interface_addresses:
+                    if address.family == socket.AF_INET and not address.address.startswith('127.'):
+                        info['interfaces'].append({
+                            'name': interface_name,
+                            'ip': address.address,
+                            'netmask': address.netmask
+                        })
+            
+            # Gateway (approssimazione)
+            if info['local_ip'] != 'N/A':
+                ip_parts = info['local_ip'].split('.')
+                info['gateway'] = f"{ip_parts[0]}.{ip_parts[1]}.{ip_parts[2]}.1"
+                info['network'] = f"{ip_parts[0]}.{ip_parts[1]}.{ip_parts[2]}.0/24"
+                
+        except Exception as e:
+            print(f"Errore informazioni rete: {e}")
+            
+        return info
         
     def setup_styles(self):
         """Configura gli stili personalizzati"""
@@ -121,23 +198,84 @@ class IPScannerGUI:
         
     def create_config_panel(self, parent):
         """Crea il pannello di configurazione"""
-        config_frame = ctk.CTkScrollableFrame(parent, width=350, label_text="⚙️ Configurazione Scansione")
+        config_frame = ctk.CTkScrollableFrame(parent, width=400, label_text="⚙️ Configurazione Scansione")
         config_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Informazioni rete rilevata
+        network_info_frame = ctk.CTkFrame(config_frame)
+        network_info_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(network_info_frame, text="🌐 Informazioni Rete Rilevata", font=ctk.CTkFont(weight="bold")).pack(pady=(10, 5))
+        
+        network_info = self.get_network_info()
+        info_text = f"🖥️  IP Locale: {network_info['local_ip']}\n"
+        info_text += f"🌍 Gateway: {network_info['gateway']}\n"
+        info_text += f"📡 Rete Suggerita: {network_info['network']}"
+        
+        info_label = ctk.CTkLabel(
+            network_info_frame, 
+            text=info_text,
+            font=ctk.CTkFont(size=11),
+            justify="left"
+        )
+        info_label.pack(pady=(0, 10), padx=10)
+        
+        # Pulsante per auto-rilevamento
+        auto_button = ctk.CTkButton(
+            network_info_frame,
+            text="🔄 Rileva Automaticamente",
+            command=self.auto_detect_and_update,
+            height=30
+        )
+        auto_button.pack(pady=(0, 10))
         
         # Target
         target_frame = ctk.CTkFrame(config_frame, fg_color="transparent")
         target_frame.pack(fill="x", pady=(0, 15))
         
         ctk.CTkLabel(target_frame, text="🎯 Target:", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
+        
+        # Frame per target entry e pulsanti suggerimenti
+        target_input_frame = ctk.CTkFrame(target_frame, fg_color="transparent")
+        target_input_frame.pack(fill="x", pady=(5, 5))
+        
         self.target_entry = ctk.CTkEntry(
-            target_frame, 
+            target_input_frame, 
             textvariable=self.target_var,
             placeholder_text="es: 192.168.1.1 o 192.168.1.0/24",
             width=300
         )
-        self.target_entry.pack(fill="x", pady=(5, 0))
+        self.target_entry.pack(fill="x")
         
-        # Modalità porte
+        # Pulsanti suggerimenti rapidi
+        suggestions_frame = ctk.CTkFrame(target_frame, fg_color="transparent")
+        suggestions_frame.pack(fill="x", pady=(5, 0))
+        
+        quick_buttons = [
+            ("🏠 Rete Casa", "192.168.1.0/24"),
+            ("🏢 Rete Ufficio", "192.168.0.0/24"),
+            ("🔒 Localhost", "127.0.0.1")
+        ]
+        
+        for i, (text, value) in enumerate(quick_buttons):
+            if i % 2 == 0:
+                button_frame = ctk.CTkFrame(suggestions_frame, fg_color="transparent")
+                button_frame.pack(fill="x", pady=2)
+            
+            button = ctk.CTkButton(
+                button_frame,
+                text=text,
+                command=lambda v=value: self.target_var.set(v),
+                width=130,
+                height=25
+            )
+            
+            if i % 2 == 0:
+                button.pack(side="left", padx=(0, 5))
+            else:
+                button.pack(side="right", padx=(5, 0))
+        
+        # Modalità porte (resto del codice rimane uguale)
         ports_frame = ctk.CTkFrame(config_frame, fg_color="transparent")
         ports_frame.pack(fill="x", pady=(0, 15))
         
@@ -242,6 +380,18 @@ class IPScannerGUI:
         )
         clear_button.pack(side="right", padx=(5, 0))
         
+    def auto_detect_and_update(self):
+        """Rileva automaticamente la rete e aggiorna l'interfaccia"""
+        self.auto_detect_network()
+        # Aggiorna anche le informazioni mostrate
+        self.refresh_network_info()
+        
+    def refresh_network_info(self):
+        """Aggiorna le informazioni di rete nell'interfaccia"""
+        # Questo metodo può essere chiamato per aggiornare dinamicamente
+        # le informazioni di rete se necessario
+        pass
+        
     def create_results_panel(self, parent):
         """Crea il pannello dei risultati"""
         results_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -288,25 +438,83 @@ class IPScannerGUI:
         
     def create_footer(self, parent):
         """Crea il footer con informazioni di stato"""
-        footer_frame = ctk.CTkFrame(parent, height=60)
+        footer_frame = ctk.CTkFrame(parent, height=120)
         footer_frame.pack(fill="x", pady=(20, 0))
         footer_frame.pack_propagate(False)
         
-        # Progress bar
-        self.progress_frame = ctk.CTkFrame(footer_frame, fg_color="transparent")
-        self.progress_frame.pack(fill="x", padx=10, pady=5)
+        # Progress section
+        progress_section = ctk.CTkFrame(footer_frame, fg_color="transparent")
+        progress_section.pack(fill="x", padx=10, pady=5)
         
-        self.progress_bar = ctk.CTkProgressBar(self.progress_frame)
-        self.progress_bar.pack(fill="x", pady=(0, 5))
+        # Progress bar con etichetta
+        progress_header = ctk.CTkFrame(progress_section, fg_color="transparent")
+        progress_header.pack(fill="x")
+        
+        self.progress_label = ctk.CTkLabel(
+            progress_header,
+            text="🔄 Progresso Scansione",
+            font=ctk.CTkFont(weight="bold")
+        )
+        self.progress_label.pack(side="left")
+        
+        self.progress_percentage = ctk.CTkLabel(
+            progress_header,
+            text="0%",
+            font=ctk.CTkFont(weight="bold")
+        )
+        self.progress_percentage.pack(side="right")
+        
+        self.progress_bar = ctk.CTkProgressBar(progress_section)
+        self.progress_bar.pack(fill="x", pady=(5, 10))
         self.progress_bar.set(0)
         
-        # Status label
-        self.status_label = ctk.CTkLabel(
-            self.progress_frame,
-            text="🟢 Pronto per la scansione",
+        # Statistics section
+        stats_section = ctk.CTkFrame(footer_frame, fg_color="transparent")
+        stats_section.pack(fill="x", padx=10, pady=(0, 5))
+        
+        # Prima riga statistiche
+        stats_row1 = ctk.CTkFrame(stats_section, fg_color="transparent")
+        stats_row1.pack(fill="x")
+        
+        self.hosts_stats_label = ctk.CTkLabel(
+            stats_row1,
+            text="🎯 Host: 0/0",
             font=ctk.CTkFont(size=12)
         )
-        self.status_label.pack()
+        self.hosts_stats_label.pack(side="left")
+        
+        self.time_stats_label = ctk.CTkLabel(
+            stats_row1,
+            text="⏱️ Tempo: 00:00",
+            font=ctk.CTkFont(size=12)
+        )
+        self.time_stats_label.pack(side="right")
+        
+        # Seconda riga statistiche
+        stats_row2 = ctk.CTkFrame(stats_section, fg_color="transparent")
+        stats_row2.pack(fill="x", pady=(2, 0))
+        
+        self.found_stats_label = ctk.CTkLabel(
+            stats_row2,
+            text="✅ Trovati: 0 host, 0 porte",
+            font=ctk.CTkFont(size=12)
+        )
+        self.found_stats_label.pack(side="left")
+        
+        self.eta_label = ctk.CTkLabel(
+            stats_row2,
+            text="🕐 Tempo stimato: --",
+            font=ctk.CTkFont(size=12)
+        )
+        self.eta_label.pack(side="right")
+        
+        # Status principale
+        self.status_label = ctk.CTkLabel(
+            footer_frame,
+            text="🟢 Pronto per la scansione",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        self.status_label.pack(pady=(5, 10))
         
     def on_port_mode_change(self):
         """Gestisce il cambio di modalità porte"""
@@ -444,21 +652,27 @@ class IPScannerGUI:
     def run_scan(self, target, ports):
         """Esegue la scansione in background"""
         try:
-            self.update_status("🔍 Scansione in corso...")
-            start_time = datetime.now()
+            self.update_status("🔍 Inizializzazione scansione...")
+            self.start_time = time.time()
+            self.hosts_completed = 0
+            self.hosts_found = 0
+            self.total_ports_found = 0
             
             if "/" in target:
                 # Scansione rete
                 self.scan_network(target, ports)
             else:
                 # Scansione singola
+                self.total_hosts = 1
+                self.update_scan_stats()
                 self.scan_single_host(target, ports)
                 
-            end_time = datetime.now()
-            duration = (end_time - start_time).total_seconds()
+            end_time = time.time()
+            duration = end_time - self.start_time
             
             if self.scan_running:
-                self.update_status(f"✅ Scansione completata in {duration:.2f} secondi")
+                self.update_status(f"✅ Scansione completata!")
+                self.update_time_stats(duration, completed=True)
                 self.show_scan_summary()
                 
         except Exception as e:
@@ -470,31 +684,47 @@ class IPScannerGUI:
                 self.scan_completed()
                 
     def scan_network(self, network, ports):
-        """Scansiona una rete"""
+        """Scansiona una rete con aggiornamenti in tempo reale"""
         try:
             net = ipaddress.ip_network(network, strict=False)
-            total_hosts = net.num_addresses
+            self.total_hosts = net.num_addresses
             
             self.append_result(f"🌐 Scansione rete: {network}\n")
-            self.append_result(f"📊 Host totali da scansionare: {total_hosts}\n")
+            self.append_result(f"📊 Host totali da scansionare: {self.total_hosts}\n")
             self.append_result("=" * 60 + "\n\n")
             
-            hosts = list(net.hosts()) if net.num_addresses > 2 else [net.network_address]
-            completed = 0
+            # Aggiorna statistiche iniziali
+            self.update_scan_stats()
             
-            for ip in hosts:
+            hosts = list(net.hosts()) if net.num_addresses > 2 else [net.network_address]
+            self.total_hosts = len(hosts)  # Aggiusta per host effettivi
+            
+            for i, ip in enumerate(hosts):
                 if not self.scan_running:
                     break
                     
-                result = self.scanner.scansiona_host(str(ip), ports)
-                completed += 1
+                # Aggiorna progresso
+                self.hosts_completed = i
+                progress = i / len(hosts) if len(hosts) > 0 else 0
+                self.update_progress(progress)
+                self.update_scan_stats()
                 
-                # Aggiorna progress
-                progress = completed / len(hosts)
-                self.root.after(0, lambda p=progress: self.progress_bar.set(p))
+                # Calcola ETA
+                if i > 0:
+                    elapsed = time.time() - self.start_time
+                    avg_time_per_host = elapsed / i
+                    remaining_hosts = len(hosts) - i
+                    eta_seconds = remaining_hosts * avg_time_per_host
+                    self.update_eta(eta_seconds)
+                
+                # Scansiona host
+                result = self.scanner.scansiona_host(str(ip), ports)
                 
                 if result:
+                    self.hosts_found += 1
+                    self.total_ports_found += len(result['porte_aperte'])
                     self.scan_results.append(result)
+                    
                     self.append_result(f"✅ {result['ip']} ({result['hostname']})\n")
                     if result['porte_aperte']:
                         for porta in result['porte_aperte']:
@@ -503,9 +733,14 @@ class IPScannerGUI:
                     self.append_result("\n")
                 else:
                     self.append_result(f"❌ {ip} - Non raggiungibile\n")
-                    
-                # Aggiorna contatore
-                self.root.after(0, lambda: self.update_results_count())
+                
+                # Aggiorna statistiche trovate
+                self.update_found_stats()
+                
+            # Completa il progresso
+            self.hosts_completed = len(hosts)
+            self.update_progress(1.0)
+            self.update_scan_stats()
                 
         except Exception as e:
             raise Exception(f"Errore scansione rete: {e}")
@@ -515,11 +750,19 @@ class IPScannerGUI:
         self.append_result(f"🎯 Scansione host: {target}\n")
         self.append_result("=" * 40 + "\n\n")
         
+        self.update_status(f"🔍 Scansionando {target}...")
+        
         result = self.scanner.scansiona_host(target, ports)
-        self.progress_bar.set(1.0)
+        
+        self.hosts_completed = 1
+        self.update_progress(1.0)
+        self.update_scan_stats()
         
         if result:
+            self.hosts_found = 1
+            self.total_ports_found = len(result['porte_aperte'])
             self.scan_results.append(result)
+            
             self.append_result(f"✅ Host attivo: {result['ip']}\n")
             self.append_result(f"🏠 Hostname: {result['hostname']}\n\n")
             
@@ -533,7 +776,47 @@ class IPScannerGUI:
         else:
             self.append_result("❌ Host non raggiungibile\n")
             
-        self.update_results_count()
+        self.update_found_stats()
+        
+    def update_progress(self, progress):
+        """Aggiorna la progress bar (thread-safe)"""
+        percentage = int(progress * 100)
+        self.root.after(0, lambda: self.progress_bar.set(progress))
+        self.root.after(0, lambda: self.progress_percentage.configure(text=f"{percentage}%"))
+        
+    def update_scan_stats(self):
+        """Aggiorna le statistiche di scansione (thread-safe)"""
+        stats_text = f"🎯 Host: {self.hosts_completed}/{self.total_hosts}"
+        self.root.after(0, lambda: self.hosts_stats_label.configure(text=stats_text))
+        
+        # Aggiorna tempo trascorso
+        if self.start_time:
+            elapsed = time.time() - self.start_time
+            self.update_time_stats(elapsed)
+            
+    def update_time_stats(self, elapsed_seconds, completed=False):
+        """Aggiorna le statistiche del tempo (thread-safe)"""
+        minutes = int(elapsed_seconds // 60)
+        seconds = int(elapsed_seconds % 60)
+        time_text = f"⏱️ Tempo: {minutes:02d}:{seconds:02d}"
+        if completed:
+            time_text += " (Completato)"
+        self.root.after(0, lambda: self.time_stats_label.configure(text=time_text))
+        
+    def update_found_stats(self):
+        """Aggiorna le statistiche degli host trovati (thread-safe)"""
+        stats_text = f"✅ Trovati: {self.hosts_found} host, {self.total_ports_found} porte"
+        self.root.after(0, lambda: self.found_stats_label.configure(text=stats_text))
+        
+    def update_eta(self, eta_seconds):
+        """Aggiorna il tempo stimato rimanente (thread-safe)"""
+        if eta_seconds < 60:
+            eta_text = f"🕐 Tempo stimato: {int(eta_seconds)}s"
+        else:
+            eta_minutes = int(eta_seconds // 60)
+            eta_secs = int(eta_seconds % 60)
+            eta_text = f"🕐 Tempo stimato: {eta_minutes}m {eta_secs}s"
+        self.root.after(0, lambda: self.eta_label.configure(text=eta_text))
         
     def stop_scan(self):
         """Ferma la scansione"""
@@ -546,7 +829,26 @@ class IPScannerGUI:
         self.scan_running = False
         self.scan_button.configure(state="normal")
         self.stop_button.configure(state="disabled")
-        self.progress_bar.set(1.0)
+        
+        # Aggiorna ETA finale
+        self.eta_label.configure(text="🏁 Completato!")
+        
+    def clear_results(self):
+        """Pulisce i risultati"""
+        if messagebox.askyesno("Conferma", "🗑️ Vuoi cancellare tutti i risultati?"):
+            self.results_text.delete("1.0", "end")
+            self.scan_results = []
+            self.update_results_count()
+            
+            # Reset statistiche
+            self.progress_bar.set(0)
+            self.progress_percentage.configure(text="0%")
+            self.hosts_stats_label.configure(text="🎯 Host: 0/0")
+            self.time_stats_label.configure(text="⏱️ Tempo: 00:00")
+            self.found_stats_label.configure(text="✅ Trovati: 0 host, 0 porte")
+            self.eta_label.configure(text="🕐 Tempo stimato: --")
+            
+            self.update_status("🟢 Risultati cancellati")
         
     def append_result(self, text):
         """Aggiunge testo ai risultati (thread-safe)"""
