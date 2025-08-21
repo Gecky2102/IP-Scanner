@@ -1,11 +1,13 @@
 # Requirements per IP Scanner
-# Questo progetto utilizza solo librerie standard di Python
-# Non sono necessarie dipendenze esterne
 
 # Per versioni Python consigliate:
 # Python >= 3.7
 
-# Librerie standard utilizzate:
+# Dipendenze per l'interfaccia grafica:
+customtkinter>=5.2.0
+pillow>=9.0.0
+
+# Librerie standard utilizzate (non richiedono installazione):
 # - socket (networking)
 # - threading (multithreading)
 # - ipaddress (gestione indirizzi IP)
@@ -14,3 +16,5 @@
 # - argparse (argomenti da linea di comando)
 # - datetime (data e ora)
 # - concurrent.futures (esecuzione asincrona)
+# - tkinter (interfaccia grafica base)
+# - json (gestione dati JSON)
