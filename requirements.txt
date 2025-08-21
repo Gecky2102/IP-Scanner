@@ -8,6 +8,11 @@ customtkinter>=5.2.0
 pillow>=9.0.0
 psutil>=5.8.0
 
+# Dipendenze per report avanzati:
+pandas>=1.3.0
+scapy>=2.4.5
+openpyxl>=3.0.0
+
 # Librerie standard utilizzate (non richiedono installazione):
 # - socket (networking)
 # - threading (multithreading)
@@ -19,3 +24,8 @@ psutil>=5.8.0
 # - concurrent.futures (esecuzione asincrona)
 # - tkinter (interfaccia grafica base)
 # - json (gestione dati JSON)
+# - csv (export CSV)
+# - html (escape HTML)
+# - webbrowser (apertura report)
+# - os (gestione file)
+# - subprocess (comandi sistema)
